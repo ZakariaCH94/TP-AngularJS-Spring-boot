@@ -1,0 +1,37 @@
+<div class="container spacer">
+    <div class="panel panel-primary">
+        <div class="panel-heading"> Liste des Produits</div>
+        <div class="panel-body">
+            <div class="form-group">
+                <label>Mot Clé: </label>
+                <input type="text" ng-model="motcle"/>
+                <button class="btn btn-primary" ng-click="goTochercherProduits()">Chercher</button>
+            </div>
+            <table class="table table-striped">
+                <tr>
+                    <th>ID</th><th>NOM</th><th>Prix</th><th>Quantité</th>
+                </tr>
+                <tr ng-repeat=" p in pageProduits.data.content">
+                    <td>{{p.id}}</td>
+                    <td>{{p.nom}}</td>
+                    <td>{{p.prix}}</td>
+                    <td>{{p.quantite}}</td>
+                    <td>
+                        <a ng-click="goToEdit(p.id)">Edit</a>
+                    </td>
+                    <td>
+                        <a>Delete</a>
+                    </td>
+                </tr>
+            </table>
+            <div class="container">
+                <ul class="nav nav-pills">
+                    <li ng-class="{active:$index==currentpage}" ng-repeat=" p in pages track by $index">
+                        <a ng-click="goToPage($index)" class="clickable">{{$index}}</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+</div>
