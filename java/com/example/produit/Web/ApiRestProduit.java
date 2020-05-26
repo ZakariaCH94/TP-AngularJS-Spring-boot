@@ -3,42 +3,68 @@ package com.example.produit.Web;
 import com.example.produit.Metier.implementsProduitInterface;
 import com.example.produit.Model.Categorie;
 import com.example.produit.Model.Produit;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import net.minidev.json.JSONObject;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
-import org.springframework.http.MediaType;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Optional;
+
 
 
 @RestController
 @CrossOrigin("*")
+
 public class ApiRestProduit {
+	
+	
 
     @Autowired
     private implementsProduitInterface produitImp;
 
     @Value("${dir.imagesprod}")
     private String imageDirprod;
-
+ 
 
     @RequestMapping(value = "/produits", method = RequestMethod.GET)
-    public Page<Produit> getAllproduitbyMc(
+    public ArrayList<Object> getAllproduitbyMc(
             @RequestParam(name = "mc", defaultValue = "") String mc,
             @RequestParam(name = "page", defaultValue = "0") int page,
-            @RequestParam(name = "size", defaultValue = "5") int size) {
-        return produitImp.getProduitbyName( mc , page, size);
+            @RequestParam(name = "size", defaultValue = "5") int size) throws IOException {
+    	
+    	Page<Produit> produits = produitImp.getProduitbyName( mc , page, size);
+    	
+      ArrayList<Object> list=new ArrayList<Object>();
+        
+        
+     JSONObject jo = new JSONObject();
+            
+     for( Produit produit : produits ) {
+        	
+         jo.put("produit",produit);
+         jo.put("data", "aaa");
+         
+         list.add(jo);
+       		
+        }
+           
+       
+       return list;
     }
 
     @RequestMapping(value = "/produit/{id}", method = RequestMethod.GET)
@@ -51,7 +77,10 @@ public class ApiRestProduit {
             @PathVariable Long id,
             @RequestParam(name = "page", defaultValue = "0") int page,
             @RequestParam(name = "size", defaultValue = "5") int size) {
-        return produitImp.getProduitbyCategorie(id , page, size);
+        
+    	return produitImp.getProduitbyCategorie(id , page, size);
+    	
+    	 
     }
 
     @RequestMapping(value = "/produitsName", method = RequestMethod.GET)
@@ -62,24 +91,33 @@ public class ApiRestProduit {
     }
 
     @RequestMapping(value = "/saveProduit", method = RequestMethod.POST)
-    public Produit saveProduit(@RequestBody Produit prod) {
-
-        Produit p=new Produit();
-        p.setNom(prod.getNom());
-        p.setPrix(prod.getPrix());
-        p.setQuantite(prod.getQuantite());
-        return produitImp.save_produit(p);
+    public Produit saveProduit(  
+    		@RequestHeader("headers") HttpHeaders  headers,
+    		@RequestParam("produit") String objectString) throws IOException{
+    	
+    	System.out.println(headers.get("Content-Type"));
+    	
+    	Produit prod = new ObjectMapper().readValue(objectString, Produit.class);
+ 
+      
+        return produitImp.save_produit(prod);
 
     }
 
-    @RequestMapping(value = "/saveProduct", method = RequestMethod.POST,consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public String saveProduct( @RequestParam (name="photo") MultipartFile file,
-                               @RequestBody Produit prod,
-                               @RequestParam(name = "categorie") Long cat) throws IOException {
+    @PostMapping(value = "/saveProduct")
+    public HashMap<String, Object> saveProduct(@RequestHeader("headers") HttpHeaders  headers,
+    						   @RequestParam("produit") String objectString,
+                               @RequestParam(name = "categorie") Long cat,
+                               @RequestParam (name="image",required = false) MultipartFile file) throws IOException {
 
-        String message="";
+    	
+        HashMap<String, Object> rtn = new LinkedHashMap<String, Object>();
+        
+    	Produit prod = new ObjectMapper().readValue(objectString, Produit.class);
+    	System.out.println(headers.get("Content-Type"));
+    	String message=""; 
         if (!file.isEmpty()) {
-
+        	 
             Produit produit = produitImp.getProduitByName(prod.getNom());
 
             if (produit == null) {
@@ -88,41 +126,31 @@ public class ApiRestProduit {
                 Categorie categorie = produitImp.getCategorieById(cat);
                 prod.setCategorie(categorie);
                 produitImp.save_produit(prod);
-                
-                String fileName = StringUtils.cleanPath(file.getOriginalFilename());
-            	Path path = Paths.get(imageDirprod + fileName);
-            	try {
-            		Files.copy(file.getInputStream(), path, StandardCopyOption.REPLACE_EXISTING);
-            	} catch (IOException e) {
-            		e.printStackTrace();
-            	}
-               //file.transferTo(new File(imageDirprod + prod.getId()));
+                file.transferTo(new File(imageDirprod + file.getOriginalFilename()));
                 //Files.write(Paths.get(System.getProperty(imageDirprod)+prod.getId()),file.getBytes());
 
                 message="succes";
             } else {
-
-                message="failed";
-            }
+ 
+                message="produit existe !";
+            } 
         }
-
-        return message;
+        
+        
+        
+         rtn.put("reponse", message);       
+         return rtn; 
+ 
+        
     }
     
     @RequestMapping(value = "/upload", method = RequestMethod.POST)
-    public ResponseEntity<String> uploadFile( @RequestParam (name="photo") MultipartFile file) {
+    public ResponseEntity<String> uploadFile( @RequestParam (name="photo") MultipartFile file) throws IOException {
 
      
-    	String fileName = StringUtils.cleanPath(file.getOriginalFilename());
-    	Path path = Paths.get(imageDirprod + fileName);
-    	try {
-    		Files.copy(file.getInputStream(), path, StandardCopyOption.REPLACE_EXISTING);
-    	} catch (IOException e) {
-    		e.printStackTrace();
-    	}
+        file.transferTo(new File(imageDirprod + file.getOriginalFilename()));
+
     	
-    	return ResponseEntity.ok("succes");
+    	return new ResponseEntity<String>("succes",HttpStatus.OK);
     }
 }
-
-
