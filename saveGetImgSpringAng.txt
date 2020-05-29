@@ -1,0 +1,169 @@
+import { Component, OnInit } from '@angular/core';
+import {ActivatedRoute, Router} from '@angular/router';
+import {Authentification} from '../../services/authentification';
+import {Category} from "../../services/category";
+import {FormBuilder, FormGroup, Validators} from "@angular/forms";
+import {Product} from "../../services/product";
+import {HttpClient} from "@angular/common/http";
+
+
+@Component({
+  selector: 'app-login',
+  templateUrl: './login.component.html',
+  styleUrls: ['./login.component.css']
+})
+export class LoginComponent implements OnInit {
+
+  dataBuffer;
+   product={
+    nom:"",
+    prix:"",
+    quantite:""
+  }
+
+  listCategory:any=[];
+  fileData: File = null;
+  username:string="";
+  retrieveResonse: any;
+  base64Data: any;
+  retrievedImage: string;
+  constructor(public authentification:Authentification,
+              public router:Router,
+              public category:Category,
+              public prod:Product,
+              public http:HttpClient) {
+
+  }
+
+  ngOnInit() {
+
+    this.Product();
+  }
+
+
+
+  fileProgress(fileInput: any) {
+    this.fileData = <File>fileInput.target.files[0];
+    console.log(this.fileData);
+  }
+  saveProduct() {
+
+    var produit = this.product;
+
+     const data =JSON.stringify({
+       produit
+    });
+
+    const formData = new FormData();
+    formData.append('image', this.fileData);
+    formData.append('produit',data.substring(11));
+    console.log(data.substring(11));
+
+    this.http.post("http://localhost:8080/saveProduct?categorie=1",formData)
+      .subscribe(data=>{
+        console.log(data);
+      },error => console.log(error));
+
+
+  }
+  //////////////////////////////////////////////////////////////////////////////////////////////
+
+
+  arrayBufferToBase64(data) {
+    let base64String = btoa(String.fromCharCode(...new Uint8Array(data)));
+    return 'data:image/jpeg;base64,'+base64String;
+  }
+
+  Product() {
+    this.http.get("http://localhost:8080/produit/1")
+      .subscribe(
+        data=>{
+
+
+          this.retrieveResonse = data;
+          this.base64Data = this.retrieveResonse.dataImage;
+          console.log(this.base64Data)
+          this.retrievedImage = 'data:image/jpeg;base64,' + this.base64Data;
+
+        },error => {
+          console.log(error)
+        }
+      )
+
+
+  }
+
+
+
+}
+
+----------------------------------------------------------------------------------
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <title>Signin</title>
+</head>
+
+<body>
+
+<div class="container spacer80">
+  <div class="row">
+    <div class="col-sm-6 col-md-4 col-md-offset-4 marginleft">
+      <div class="account-wall">
+
+        <div class="form-signin">
+          <label class="badge badge-primary">Nom</label>
+          <input type="text"  name="nom" class="form-control" placeholder="Nom" required="true" autofocus [(ngModel)]="product.nom" >
+          <label class="badge badge-primary">Prix</label>
+          <input type="text"  name="prix" class="form-control" placeholder="Prix" required="true" autofocus [(ngModel)]="product.prix" >
+          <label class="badge badge-primary">quantite</label>
+          <textarea name="quantite" class="form-control" placeholder="quantite" required autofocus [(ngModel)]="product.quantite"  style="height:100px"></textarea>
+          <label class="badge badge-primary">Image</label>
+          <input type="file" name="image" class="form-control" (change)="fileProgress($event)" required autofocus>
+
+          <button class="btn btn-primary" (click)="saveProduct()"></button>
+
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+</body>
+</html>
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <title>Signin</title>
+</head>
+
+<body>
+
+<div class="container spacer80">
+  <div class="row">
+
+    <div class="col-lg-4 col-md-6 mb-4">
+      <div class="card h-100">
+        <a href="#"><img class="card-img-top" [src]="retrievedImage"  alt=""></a>
+      </div>
+  </div>
+</div>
+</div>
+
+
+</body>
+</html>
+
